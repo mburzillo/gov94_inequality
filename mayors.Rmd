@@ -1,0 +1,75 @@
+---
+title: "Mayors"
+author: "Maria Burzillo"
+date: "4/18/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyverse)
+```
+
+
+```{r import data, include = FALSE}
+
+mayors <- read_csv("mayor_data.csv")
+
+# take only basic vars needed
+simple_mayor <- mayors %>%
+  select(city, cityid, year, citystabbr, winnername, winnerparty, incumbentpercent, incumbentlose, 
+         incumbentwin, losername, winnerrace, winnerpercent, loserparty, loserpercent, 
+         countyname, loserrace, diffwinnerandloser) %>%
+  filter(!(is.na(winnerrace))) %>%
+  mutate(source = "HopkinsPettingill")
+
+```
+
+
+```{r create surveying indicators, include = FALSE}
+
+simple_mayor <- simple_mayor %>%
+  mutate(holc_city = NA) 
+
+simple_mayor$holc_city[simple_mayor$citystabbr == "AuroraIL"] <- "Aurora"
+simple_mayor$holc_city[simple_mayor$citystabbr == "BeaumontTX"] <- "Beaumont"
+simple_mayor$holc_city[simple_mayor$citystabbr == "Colorado SpringsCO"] <- "Colorado Springs"
+simple_mayor$holc_city[simple_mayor$citystabbr == "ColumbiaSC"] <- "Columbia"
+simple_mayor$holc_city[simple_mayor$citystabbr == "ColumbusGA"] <- "Columbus"
+simple_mayor$holc_city[simple_mayor$citystabbr == "Corpus ChristiTX"] <- "Corpus Christi"
+simple_mayor$holc_city[simple_mayor$citystabbr == "DurhamNC"] <- "Durham"
+simple_mayor$holc_city[simple_mayor$citystabbr == "FresnoCA"] <- "Fresno"
+simple_mayor$holc_city[simple_mayor$citystabbr == "GalvestonTX"] <- "Galveston"
+simple_mayor$holc_city[simple_mayor$citystabbr == "GreensboroNC"] <- "Greensboro"
+simple_mayor$holc_city[simple_mayor$citystabbr == "GreenvilleSC"] <- "Greenville"
+simple_mayor$holc_city[simple_mayor$citystabbr == "High PointNC"] <- "High Point"
+simple_mayor$holc_city[simple_mayor$citystabbr == "JolietIL"] <- "Joliet"
+simple_mayor$holc_city[simple_mayor$citystabbr == "LaredoTX"] <- "Laredo"
+simple_mayor$holc_city[simple_mayor$citystabbr == "LexingtonKY"] <- "Lexington"
+simple_mayor$holc_city[simple_mayor$citystabbr == "LubbockTX"] <- "Lubbock"
+simple_mayor$holc_city[simple_mayor$citystabbr == "MaconGA"] <- "Macon"
+simple_mayor$holc_city[simple_mayor$citystabbr == "MadisonWI"] <- "Madison"
+simple_mayor$holc_city[simple_mayor$citystabbr == "MonroeLA"] <- "Monroe"
+simple_mayor$holc_city[simple_mayor$citystabbr == "OrlandoFL"] <- "Orlando"
+simple_mayor$holc_city[simple_mayor$citystabbr == "PhoenixAZ"] <- "Phoenix"
+simple_mayor$holc_city[simple_mayor$citystabbr == "RaleighNC"] <- "Raleigh"
+simple_mayor$holc_city[simple_mayor$citystabbr == "San JoseCA"] <- "San Jose"
+simple_mayor$holc_city[simple_mayor$citystabbr == "TucsonAZ"] <- "Tucson"
+
+#simple_mayor %>% filter(citystabbr == "AuroraIL")
+
+simple_mayor %>%
+  filter(!(is.na(holc_city)), winnerrace != "white", winnerrace != ".")
+
+## going to need to supplement with additional data...
+
+
+
+```
+
+
+```{r data supplement from}
+
+```
+
