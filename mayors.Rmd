@@ -22,13 +22,17 @@ simple_mayor <- mayors %>%
          incumbentwin, losername, winnerrace, winnerpercent, loserparty, loserpercent, 
          countyname, loserrace, diffwinnerandloser) %>%
   filter(!(is.na(winnerrace))) %>%
-  mutate(source = "HopkinsPettingill")
+  mutate(source = "HopkinsPettingill")%>%
+  separate(citystabbr, into = c("city1", "stateab"), sep = -2) %>%
+  select(-city1)
+
+threshold_cities <- read_csv("threshold_merge.csv")
+
 
 ```
 
 
 ```{r create surveying indicators, include = FALSE}
-
 simple_mayor <- simple_mayor %>%
   mutate(holc_city = NA) 
 
@@ -64,12 +68,51 @@ simple_mayor %>%
 
 ## going to need to supplement with additional data...
 
+colnames(simple_mayor)
+```
 
+
+```{r create surveying indicators, include = FALSE}
+# merge with threshold dataset
+
+simple_mayor_holc <- simple_mayor %>%
+  filter(!(is.na(holc_city)))
+
+threshold_cities_merged <- left_join(simple_mayor, threshold_cities, by = c("city" = "City", "stateab" = "State")) 
+
+threshold_cities_merged <- threshold_cities_merged%>% 
+  filter(!(is.na(Surveyed)), winnerrace != ".")  %>%
+  mutate(winner_black = ifelse(winnerrace == "black", 1, 0))
+
+threshold_cities_merged %>%
+  ggplot(aes(x = winner_black)) +
+  geom_bar() +
+  facet_wrap(~Surveyed)
+
+threshold_cities_merged %>%
+  ggplot(aes(x = year, y = winner_black)) +
+  geom_point() +
+  geom_smooth(se = F) +
+  facet_wrap(~Surveyed)
 
 ```
 
 
-```{r data supplement from}
+```{r data supplement from https://blackdemographics.com/culture/black-politics/black-mayors/}
 
+black_demo <- tibble(
+  "holc_city" = c(NA),
+  "stateabbr" = c(NA),
+  "year" = c(NA), 
+  "citystabbr" = c(NA), 
+  "winnerrace" = c(NA),
+  "winnername" = c(NA),
+  "source" = "blackdemo"           
+)
+
+        
+new <- load("/Users/mariaburzillo/Downloads/mayors_rdd_analysis_final.RData")
+
+new1 <- load("/Users/mariaburzillo/Downloads/place_demog.RData")
 ```
 
