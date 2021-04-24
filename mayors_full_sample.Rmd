@@ -1,0 +1,90 @@
+---
+title: "Mayors full sample"
+author: "Maria Burzillo"
+date: "4/23/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+```
+
+```{r import data}
+# mayor data
+vogl_mayor <- read.csv("mayors_share_vogl.csv")
+
+# get cities within 10k range
+cities_1930 <- read.csv("ipums_1930_cities_by_pop_full_sample.csv") %>%
+  select(city_code = city, cityname, state, citypop_total)
+
+# cities within 20-60 range
+cities_1930_20_60 <- cities_1930 %>%
+  filter(citypop_total <= 60000,
+         citypop_total >= 20000) %>%
+  mutate(surveyed = ifelse(citypop_total >= 40000, 1, 0)) 
+
+#view(cities_1930_20_60)
+
+```
+
+
+```{r}
+# take out Barberton, OH - surveyed in MI according to Faber 2020
+# take out Duquesne, PA - in MI according to Faber 2020
+# take out East Cleveland -> Cleveland was surveyed, also in Mapping Inequality according to Faber 2020
+# take out Everett, MA -> in Mapping Inequality according to Faber 2020
+# get rid of Ferndale MI -> in Mapping Inequality according to Faber 2020
+# Garfield, NJ -> in Mapping Inequality according to Faber 2020
+# Hackensack, NJ -> in Mapping Inequality according to Faber 2020
+# Homestead, PA -> in Mapping Inequality according to Faber 2020
+# Lackawanna NY -> in Mapping Inequality according to Faber 2020
+# Middletown, OH -> in Mapping Inequality according to Faber 2020
+# New London, CT -> in Mapping Inequality according to Faber 2020
+# Newport News, VA -> in Mapping Inequality according to Faber 2020
+# Norwalk, CT -> in Mapping Inequality according to Faber 2020
+# University City, MO -> in Mapping Inequality according to Faber 2020
+# Exclude West NY -> in NJ but right across from Manhattan, graded and within Mapping Inequality, but not Hillier
+# Wilkinsburg, PA -> in NJ but right across from Manhattan, graded and within Mapping Inequality, but not Hillier
+# Salem, MA -> in Hillier
+
+
+
+
+
+
+
+# check out Berwyn IL, not recorded as redlined but seems to be in Chicago
+# check chicopee and holyoke and whole problematic list
+# check montclair NJ
+
+# Newport News is in Mapping Inequality
+```
+
+
+```{r fixing missclassifications of survey status}
+
+# take out mismatched classifications 
+
+
+actually_redlined <- c("Barberton", "Duquesne", "East Cleveland", 
+                       "Wilkinsburg", "West New York", "University City",
+                       "Norwalk", "Newport News", "New London",
+                       "Lackawanna", "Homestead", "Hackensack",
+                       "Garfield", "Ferndale") 
+
+
+cities_1930_20_60_checked <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Salem" & cities_1930_20_60$state == "MA"),]
+
+cities_1930_20_60_checked <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Middletown" & cities_1930_20_60$state == "OH"),]
+
+cities_1930_20_60_checked <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Everett" & cities_1930_20_60$state == "MA"),]
+
+cities_1930_20_60_checked <- cities_1930_20_60_checked %>%
+  filter(!(cityname %in% actually_redlined))
+
+# should be 303 - 3 - 14: 286 -> correct!
+
+```
+

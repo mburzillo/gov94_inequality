@@ -28,6 +28,14 @@ simple_mayor <- mayors %>%
 
 threshold_cities <- read_csv("threshold_merge.csv")
 
+# large file -> should subset and save again
+fin_seg <- read_csv("fin_seg.csv")
+
+fin_seg %>%
+  select(name00) %>%
+  unique() %>%
+  view()
+
 
 ```
 
@@ -94,6 +102,8 @@ threshold_cities_merged %>%
   geom_point() +
   geom_smooth(se = F) +
   facet_wrap(~Surveyed)
+
+write.csv(threshold_cities_merged, "threshold_cities_merged.csv")
 
 ```
 
