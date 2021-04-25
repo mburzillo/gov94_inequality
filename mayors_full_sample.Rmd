@@ -27,7 +27,7 @@ cities_1930_20_60 <- cities_1930 %>%
 
 #view(cities_1930_20_60)
 cities_1930 %>%
-  filter(cityname == "Champaign")
+  filter(cityname == "Delray Beach")
 ```
 
 
@@ -42,7 +42,6 @@ cities_1930 %>%
 
 
 ```{r fixing missclassifications of survey status}
-
 # take out mismatched classifications 
 
 # take out Barberton, OH - surveyed in MI according to Faber 2020
@@ -74,39 +73,93 @@ actually_redlined <- c("Barberton", "Duquesne", "East Cleveland",
 
 cities_1930_20_60_checked <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Salem" & cities_1930_20_60$state == "MA"),]
 
-cities_1930_20_60_checked <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Middletown" & cities_1930_20_60$state == "OH"),]
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Middletown" & cities_1930_20_60_checked$state == "OH"),]
 
-cities_1930_20_60_checked <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Everett" & cities_1930_20_60$state == "MA"),]
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Everett" & cities_1930_20_60_checked$state == "MA"),]
 
 cities_1930_20_60_checked <- cities_1930_20_60_checked %>%
   filter(!(cityname %in% actually_redlined))
 
 # should be 303 - 3 - 14: 286 -> correct!
+```
 
 
+```{r fixing missclassifications of survey status}
 # must be own city boundaries or combined pop must be within same range
 
 # not within same city
 # in SF
 
+# rules
+# no city boundaries but place point -> fine
+# no place point -> ok, but can't be within other urban area
+
 not_own_city <- c("Alameda", "Alhambra", "Aliquippa", "Ambridge",
-                  "Attleboro", "Bessemer", "Beverly", "Bloomfield",
+                  "Attleboro", "Bessemer", "Berwyn", "Beverly", "Bloomfield",
                   "Carbondale", "Central Falls", "Chicago Heights",
-                  "Cohoes")
+                  "Cohoes", "Dunmore", "Chelsea", "Chicopee", 
+                  "Cleveland Heights", "Clifton", "Council Bluffs",
+                  "Cranston", "Dearborn", "East Chicago", "Easton",
+                  "Elyria", "Elkhart", "Gloucester", "Granite City",
+                  "Hamtramck Village", "Highland Park", "Hoboken", "Holyoke",
+                  "Huntington Beach", "Irvington", "Kearny", "Linden",
+                  "Lorain", "Malden", "Massillon", "McKeesport",
+                  "Medford", "Melrose", "Meriden", "Mishawaka", "Montclair",
+                  "Nanticoke", "New Albany", "New Brunswick", "New Rochelle",
+                  "Norristown Borough", "Northampton", "Norwich", "Norwood",
+                  "Nutley", "Orange", "Peabody", "Perth Amboy", "Plainfield",
+                  "Pomona", "Port Chester", "Revere", "Royal Oak", "Salem", 
+                  "Santa Ana", "Santa Monica", "Superior", "Union City",
+                  "Waltham", "Warren","Washington", "Waukegan", "Wauwatosa",
+                  "West Allis", "West Orange", "White Plains", "Woonsocket",
+                  "Wyandotte")
 
-cities_1930_20_60_checked9 <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Belleville" & cities_1930_20_60$state == "IL"),]
+length(not_own_city)
 
-cities_1930_20_60_checked9 <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Belleville" & cities_1930_20_60$state == "NJ"),]
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Belleville" & cities_1930_20_60_checked$state == "IL"),]
 
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Belleville" & cities_1930_20_60_checked$state == "NJ"),]
 
-cities_1930_20_60_checked %>%
-  filter(cityname == "Cohoes")
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Everett" & cities_1930_20_60_checked$state == "WA"),]
+
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Kingston" & cities_1930_20_60_checked$state == "PA"),]
+
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Middletown" & cities_1930_20_60_checked$state == "CT"),]
+
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Portsmouth" & cities_1930_20_60_checked$state == "VA"),]
+
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Richmond" & cities_1930_20_60_checked$state == "CA"),]
 
 # combined cities > pop or other city redlined
-combined_too_big <- c("Ashland")
+combined_too_big <- c("Ashland", "Bethlehem", "Fitchburg", "Haverhill", "Leominster",
+                      "Lewiston", "Moline", "Riverside", "San Bernardino",
+                      "Rock Island", "Saint Petersburg")
+
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Alexandria" & cities_1930_20_60_checked$state == "VA"),]
+
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Newport" & cities_1930_20_60_checked$state == "KY"),]
+
+cities_1930_20_60_checked <- cities_1930_20_60_checked[!(cities_1930_20_60_checked$cityname == "Rome" & cities_1930_20_60_checked$state == "NY"),]
 
 
 ### GOT THROUGH Cumberland, MD filtered for survey status
+
+cities_1930_20_60_checked <- cities_1930_20_60_checked %>%
+  filter(!(cityname %in% not_own_city)) %>%
+  filter(!(cityname %in% combined_too_big))
+
+
+# currently through the Ms
+
+cities_1930_20_60_checked %>%
+  filter(cityname == "Wyandotte")
+
+
+# checking correct # -> good
+286 - length(not_own_city) - 7 - length(combined_too_big) - 3
+
+  
+# view(cities_1930_20_60_checked)
 
 ```
 
