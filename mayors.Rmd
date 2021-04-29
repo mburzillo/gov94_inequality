@@ -22,7 +22,7 @@ simple_mayor <- mayors %>%
          incumbentwin, losername, winnerrace, winnerpercent, loserparty, loserpercent, 
          countyname, loserrace, diffwinnerandloser) %>%
   filter(!(is.na(winnerrace))) %>%
-  mutate(source = "HopkinsPettingill")%>%
+  mutate(source = "HopkinsPettingill", cityst = citystabbr)%>%
   separate(citystabbr, into = c("city1", "stateab"), sep = -2) %>%
   select(-city1)
 
@@ -36,6 +36,12 @@ fin_seg %>%
   unique() %>%
   view()
 
+simple_mayor %>%
+  select(city, stateab) %>%
+  unique() %>%
+  view()
+
+write.csv(simple_mayor, "Hopkins_Pettingill_mayors.csv")
 
 ```
 

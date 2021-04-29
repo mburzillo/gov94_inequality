@@ -15,6 +15,7 @@ library(stringr)
 ```{r import data}
 # mayor data
 vogl_mayor <- read.csv("mayors_share_vogl.csv")
+hp_mayors <- read.csv("Hopkins_Pettingill_mayors.csv")
 
 # get cities within 10k range
 cities_1930 <- read.csv("ipums_1930_cities_by_pop_full_sample.csv") %>%
@@ -29,6 +30,7 @@ cities_1930_20_60 <- cities_1930 %>%
 #view(cities_1930_20_60)
 cities_1930 %>%
   filter(cityname == "Delray Beach")
+
 ```
 
 
@@ -46,11 +48,119 @@ cities_1930_20_60_checked <- cities_1930_20_60[!(cities_1930_20_60$cityname == "
 vogl_mayor_clean$cityname[vogl_mayor_clean$cityname[vogl_mayor_clean$state == "KY"] == "Lexington-Fayette"] <- "Lexington"
 
 vogl_mayor_clean %>%
-  filter(state == "KY")
+  filter(state == "CO")
 ```
 
 
-```{r fixing missclassifications of survey status}
+
+```{r clean Hopkins Pettingill data, include = FALSE}
+
+# first join for cities not present in the other data -> no worry about overlap of city-years
+
+missing_cities <- c("DanvilleVA", "KankakeeIL", "La GrangeGA", "MaywoodIL",
+                    "MeridianMS", "NewburghNY", "Pine BluffAR", "PoughkeepsieNY",
+                    "Rocky MountNC", "RomeGA", "SpartanburgSC", "WilmingtonNC")
+
+duplicate_but_missing_cities <- c("Colorado SpringsCO","DurhamNC", "FresnoCA", "RaleighNC", 
+                      "TucsonAZ", "TuscaloosaAL", "West Palm BeachFL", "BeaumontTX",
+                      "PensacolaFL","GreenvilleSC")
+
+missing_all <- c(missing_cities, duplicate_but_missing_cities)
+
+hp_mayors %>%
+  filter(cityst == "WilmingtonNC")
+
+other_race = c("asian", "hispanic", "white")
+
+hp_mayors_sub <- hp_mayors %>%
+  filter(cityst %in% missing_all) %>%
+  mutate(bmayor = ifelse(winnerrace == "black", 1, ifelse(winnerrace %in% other_race, 0, NA))) %>%
+  mutate(bmayor_to_sum = ifelse(winnerrace == "black", 1,  0)) %>%
+  group_by(cityst) %>%
+  mutate(tot_bmayor = sum(bmayor_to_sum, na.rm = T)) %>%
+  ungroup() %>%
+  mutate(bever = ifelse(tot_bmayor > 0, 1, 0))
+
+# hp_mayors_sub %>% select(winnerrace, bmayor)
+
+# unique(hp_mayors$winnerrace)
+
+```
+
+```{r examining duplicates -> NONE SHOULD BE ADDED, include = FALSE}
+# figure out the doubles
+
+duplicate_cities <- c("AmarilloTX", "AuroraIL", "ChesterPA", 
+                      "ColumbiaSC", "ColumbusGA", "Corpus ChristiTX", 
+                      "GalvestonTX", "GreensboroNC", "JacksonMS", "JolietIL",
+                      "LaredoTX", "LubbockTX", "MaconGA", "MadisonWI", "MonroeLA", "OrlandoFL",
+                      "PhoenixAZ",  "San JoseCA", "Sioux FallsSD",
+                      "StocktonCA")
+
+length(duplicate_cities)
+
+# do the duplicate cities also have duplicate years? -> 84 potential duplicates
+hp_mayors_duplicate_sub <- hp_mayors %>%
+  filter(cityst %in% duplicate_cities) %>%
+  select(city,stateab, year, source)
+
+
+vogl_mayor_clean_sub <- vogl_mayor_clean %>%
+  select(cityname, state, year) %>%
+  mutate(good = "goood") %>%
+  unique()
+
+city_state_matches <- left_join(hp_mayors_duplicate_sub, vogl_mayor_clean_sub, by = c("city" = "cityname", "stateab" = "state"))
+
+# for year duplicates, want to know if ones already in vogl also in new
+city_state_year_matches <- left_join(vogl_mayor_clean_sub, hp_mayors_duplicate_sub, by = c("cityname" = "city", "state" = "stateab", "year" = "year")) 
+
+# not matched from vogl -> These don't appear to be in Vogl at all... why marked in originally?
+city_state_matches %>%
+  filter(is.na(good))
+
+# match with hp by year, city, state -> need to remove from that before joining to avoid duplicates -> all potential duplicates are matched -> need to remove all
+city_state_year_matches %>%
+  filter(source == "HopkinsPettingill")
+
+hp_mayors_sub
+
+```
+
+```{r join both sources of mayor data, include = FALSE}
+# 14214 obs (11,224)
+vogl_mayor_clean %>%
+  mutate(count = 1) %>%
+  group_by(cityname, state) %>%
+  summarise(tot_obs = sum(count)) %>%
+  view()
+
+# 77 obs
+hp_mayors_sub %>%
+  mutate(count = 1) %>%
+  group_by(city, stateab) %>%
+  summarise(tot_obs = sum(count)) %>%
+  view()
+
+
+# ISSUE WITH THE JOIN...WHY?
+
+# 14289 obs -> missing 2 obs
+full_mayor <- full_join(vogl_mayor_clean, hp_mayors_sub, by = c("cityname" = "city", "state" = "stateab", 
+                                                  "year" = "year", "bmayor" = "bmayor", "bever" = "bever"))
+
+# count obs for each city and then compare?
+
+full_mayor %>%
+  mutate(count = 1) %>%
+  group_by(cityname, state) %>%
+  summarise(tot_obs = sum(count)) %>%
+  view()
+
+```
+
+
+```{r population work: fixing missclassifications of survey status, include = FALSE}
 
 # check out Berwyn IL, not recorded as redlined but seems to be in Chicago
 # check chicopee and holyoke and whole problematic list
@@ -235,10 +345,13 @@ vogl_mayor_clean %>%
 ```
 
 
+
 ```{r write data, include = FALSE}
 # write csv for all cities mayor and redlining data 
 
 write.csv(redlined_mayor, "redlined_mayor.csv")
+
+
 
 ```
 
