@@ -131,14 +131,18 @@ hp_mayors_sub
 # 14214 obs (11,224)
 vogl_mayor_clean %>%
   mutate(count = 1) %>%
-  group_by(cityname, state) %>%
+  #filter(year == 2002 | year == 2007) %>%
+  filter(cityname == "Tuscaloosa") %>%
+  group_by(cityname, state, year) %>%
   summarise(tot_obs = sum(count)) %>%
   view()
 
 # 77 obs
 hp_mayors_sub %>%
   mutate(count = 1) %>%
-  group_by(city, stateab) %>%
+  #filter(year == 2002 | year == 2007) %>%
+  filter(city == "Tuscaloosa") %>%
+  group_by(city, stateab, year) %>%
   summarise(tot_obs = sum(count)) %>%
   view()
 
@@ -153,9 +157,24 @@ full_mayor <- full_join(vogl_mayor_clean, hp_mayors_sub, by = c("cityname" = "ci
 
 full_mayor %>%
   mutate(count = 1) %>%
+  filter(year == 2002 | year == 2007) %>%
   group_by(cityname, state) %>%
   summarise(tot_obs = sum(count)) %>%
   view()
+
+# 628
+full_mayor %>%
+  filter(year == 2002 | year == 2007)
+
+# 10 
+hp_mayors_sub %>%
+  mutate(count = 1) %>%
+  filter(year == 2002 | year == 2007)
+
+# 618
+vogl_mayor_clean %>%
+  mutate(count = 1) %>%
+  filter(year == 2002 | year == 2007) 
 
 ```
 
@@ -299,8 +318,8 @@ cities_1930_20_60_checked %>%
 
 ```{r join with mayor data, include = FALSE}
 
-redlined_mayor <- left_join(vogl_mayor_clean, cities_1930_20_60_checked, by = c("cityname", "state")) %>%
-  rename(pop_1930 = citypop_total)
+redlined_mayor <- left_join(full_mayor, cities_1930_20_60_checked, by = c("cityname", "state")) %>%
+  rename(pop_1930 = citypop_total) 
 
 # cities 30-50
 redlined_mayor %>%
@@ -313,7 +332,7 @@ redlined_mayor %>%
 # cities 20-60
 redlined_mayor %>%
   mutate(count = 1) %>%
-  filter(!(is.na(surveyed)), pop_1930 >= 20000, pop_1930 <= 60000) %>%
+  filter(!(is.na(surveyed)),!(is.na(bmayor)), pop_1930 >= 20000, pop_1930 <= 60000) %>%
   group_by(cityname, state, surveyed) %>%
   summarise(tot_count = sum(count)) %>%
   view()
@@ -324,7 +343,8 @@ redlined_mayor %>%
   filter(cityname == "Lima", state == "OH")
 
 redlined_mayor <- redlined_mayor %>%  
-  filter(!(is.na(surveyed)))
+  filter(!(is.na(surveyed))) %>%
+  filter(!(is.na(bmayor)))
 
 redlined_mayor %>%
   mutate(count = 1) %>%
@@ -352,6 +372,12 @@ vogl_mayor_clean %>%
 write.csv(redlined_mayor, "redlined_mayor.csv")
 
 
+redlined_mayor_cities <- redlined_mayor %>%
+  mutate(count = 1) %>%
+  group_by(cityname, state, surveyed) %>%
+  summarise(tot = sum(count)) %>%
+  select(cityname, state)
 
+unique(redlined_mayor$year)
 ```
 

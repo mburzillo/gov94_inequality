@@ -1,0 +1,95 @@
+---
+title: "1940 Full Sample"
+author: "Maria Burzillo"
+date: "5/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r import data}
+raw_codebook <- read.csv("code_book_raw_1940.csv")
+
+#first <- read.csv("usa_00029.csv")
+
+second <- read.csv("usa_00030.csv")
+
+#third <- read.csv("usa_00031.csv")
+
+#fourth <- read.csv("usa_00032.csv")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r clean raw codebook, echo=FALSE}
+
+codebook_city_1940 <- raw_codebook %>%
+  separate(city, c("city", "state"), ",") %>%
+  
+```
+
+
+```{r take only relevant cities from big file}
+
+redlined_mayor_cities_unite <-  redlined_mayor_cities %>%
+  unite("cityst", cityname, state, sep = ", ")
+
+codebook_mayor_cities <- left_join(redlined_mayor_cities_unite, raw_codebook, by = c("cityst" = "city"))
+
+first_join <- left_join(first, codebook_mayor_cities, by = c("CITY" = "code")) %>%
+  filter(!(is.na(cityst)))
+
+write.csv(first_join, "first_join.csv")
+
+first_join_sub <- first_join %>%filter(!(is.na(cityst)))
+
+first_join_sub %>% mutate(count = 1) %>% group_by(CITY, cityst) %>% summarize(tot = sum(count))
+```
+
+```{r fourth, include = FALSE}
+fourth_join <- left_join(fourth, codebook_mayor_cities, by = c("CITY" = "code"))  %>% filter(!(is.na(cityst)))
+
+fourth_join_sub <- fourth_join %>% filter(!(is.na(cityst)))
+
+fourth_join_sub %>% mutate(count = 1) %>% group_by(CITY, cityst) %>% summarize(tot = sum(count))
+
+
+write.csv(fourth_join, "fourth_join.csv")
+```
+
+
+```{r}
+third_join <- left_join(third, codebook_mayor_cities, by = c("CITY" = "code")) %>% filter(!(is.na(cityst)))
+
+third_join_sub <- third_join %>% filter(!(is.na(cityst)))
+
+third_join_sub %>% mutate(count = 1) %>% group_by(CITY, cityst) %>% summarize(tot = sum(count))
+
+
+write.csv(third_join, "third_join.csv")
+```
+
+
+```{r}
+second_join <- left_join(second, codebook_mayor_cities, by = c("CITY" = "code")) %>% filter(!(is.na(cityst)))
+
+second_join_sub <- second_join %>% filter(!(is.na(cityst)))
+
+second_join_sub %>% mutate(count = 1) %>% group_by(CITY, cityst) %>% summarize(tot = sum(count))
+
+write.csv(second_join, "second_join.csv")
+
+nrow(second_join)
+```
+

@@ -1,0 +1,68 @@
+---
+title: "cleaning_full_sample"
+author: "Maria Burzillo"
+date: "5/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r read in all the files}
+# first <- read.csv("first_join.csv")
+# second <- read.csv("second_join.csv")
+# third <- read.csv("third_join.csv")
+# fourth <- read.csv("fourth_join.csv")
+```
+
+
+```{r bind data}
+full_1940_sample_redlined_mayors <- rbind(first, second)
+full_1940_sample_redlined_mayors <- rbind(full_1940_sample_redlined_mayors,
+                                          third)
+full_1940_sample_redlined_mayors <- rbind(full_1940_sample_redlined_mayors,
+                                          fourth)
+```
+
+
+```{r write data, include = FALSE}
+write.csv(full_1940_sample_redlined_mayors, "full_1940_sample_redlined_mayors.csv")
+```
+
+
+```{r check for data issues}
+
+full_1940_sample_redlined_mayors <- read.csv("full_1940_sample_redlined_mayors.csv") 
+
+# Remove an accidental duplicate and delete unnecessary columns
+full_1940_sample_redlined_mayors <- full_1940_sample_redlined_mayors[!(full_1940_sample_redlined_mayors$CITY == 3392 & full_1940_sample_redlined_mayors$STATEFIP == 12),] %>%
+  select(-RACED, -HIGHGRADED, EDUCD)
+
+#full_1940_sample_redlined_mayors %>% filter(CITY == 3392, STATEFIP == 12)
+
+```
+
+```{r preview}
+head(full_1940_sample_redlined_mayors)
+
+```
+
+```{r generate person-level summary statistics by city}
+full_1940_sample_redlined_mayors %>%
+  mutate(n_black_perwt = ifelse(RACE == 2, 1 * PERWT, 0),
+         n_non_white_perwt = ifelse(RACE != 1, 1 * PERWT, 0),
+         n_foreign_born = ifelse(NATIVITY == 5, 1 * PERWT, 0),
+         
+         )
+
+```
+
+```{r collapse by city}
+full_1940_sample_redlined_mayors %>%
+  group_by(CITY, cityst, REGION, STATEICP, STATEFIP) %>%
+  summarise(tot_pop = sum(PERWT), citypop_gen = mean(CITYPOP))
+
+```
+
