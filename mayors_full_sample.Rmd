@@ -31,6 +31,16 @@ cities_1930_20_60 <- cities_1930 %>%
 cities_1930 %>%
   filter(cityname == "Delray Beach")
 
+
+vogl_mayor %>%
+  mutate(tot = 1) %>%
+  group_by(city, name, state) %>%
+  summarize(tot = sum(tot))
+
+vogl_mayor %>%
+  filter(state == "AL") %>%
+  view()
+
 ```
 
 
@@ -40,8 +50,9 @@ vogl_mayor_clean <- vogl_mayor %>%
   rename(raw_city = city, raw_state = state) %>%
   separate(name, c("cityname", "state"),",") %>%
   separate(state, c("space", "state"), " ") %>%
-  select(-space) %>%
-  mutate(cityname = as.character(str_to_title(cityname)))
+  select(-space, -raw_city, -raw_state) %>%
+  mutate(cityname = as.character(str_to_title(cityname)), vogl = 1) %>%
+  select(cityname, state, year, bmayor, vogl)
 
 cities_1930_20_60_checked <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Salem" & cities_1930_20_60$state == "MA"),]
 
@@ -61,19 +72,16 @@ missing_cities <- c("DanvilleVA", "KankakeeIL", "La GrangeGA", "MaywoodIL",
                     "MeridianMS", "NewburghNY", "Pine BluffAR", "PoughkeepsieNY",
                     "Rocky MountNC", "RomeGA", "SpartanburgSC", "WilmingtonNC")
 
-duplicate_but_missing_cities <- c("Colorado SpringsCO","DurhamNC", "FresnoCA", "RaleighNC", 
-                      "TucsonAZ", "TuscaloosaAL", "West Palm BeachFL", "BeaumontTX",
-                      "PensacolaFL","GreenvilleSC")
+#duplicate_but_missing_cities <- c("Colorado SpringsCO","DurhamNC", "FresnoCA", "RaleighNC", "TucsonAZ", "West Palm BeachFL", "BeaumontTX", "PensacolaFL","GreenvilleSC")
 
-missing_all <- c(missing_cities, duplicate_but_missing_cities)
+# missing_all <- c(missing_cities, duplicate_but_missing_cities)
 
-hp_mayors %>%
-  filter(cityst == "WilmingtonNC")
+# hp_mayors %>% filter(cityst == "WilmingtonNC")
 
 other_race = c("asian", "hispanic", "white")
 
 hp_mayors_sub <- hp_mayors %>%
-  filter(cityst %in% missing_all) %>%
+  filter(cityst %in% missing_cities) %>%
   mutate(bmayor = ifelse(winnerrace == "black", 1, ifelse(winnerrace %in% other_race, 0, NA))) %>%
   mutate(bmayor_to_sum = ifelse(winnerrace == "black", 1,  0)) %>%
   group_by(cityst) %>%
@@ -85,15 +93,40 @@ hp_mayors_sub <- hp_mayors %>%
 
 # unique(hp_mayors$winnerrace)
 
+hp_mayors_clean <- hp_mayors %>%
+  mutate(bmayor = ifelse(winnerrace == "black", 1, ifelse(winnerrace %in% other_race, 0, NA))) %>%
+  mutate(bmayor_to_sum = ifelse(winnerrace == "black", 1,  0)) %>%
+  group_by(cityst) %>%
+  mutate(tot_bmayor = sum(bmayor_to_sum, na.rm = T)) %>%
+  ungroup() %>%
+  mutate(bever = ifelse(tot_bmayor > 0, 1, 0), status = "match", hp = 1) %>%
+  select(city, stateab, year, bmayor, status, hp)
+
 ```
 
-```{r examining duplicates -> NONE SHOULD BE ADDED, include = FALSE}
-# figure out the doubles
 
+```{r}
+
+# join -> deal with the matches -> don't want any matches!! other than that should be good :)
+full_join(vogl_mayor_clean, hp_mayors_clean, by = c("cityname" = "city", "state" = "stateab", "year" = "year", "bmayor" = "bmayor"))
+
+# previous stats:
+# vogl clean 14214
+# hp clean 1088
+# total: 15302
+# original join has 14707
+
+```
+
+
+```{r examining duplicates -> NONE SHOULD BE ADDED, include = FALSE}
+
+# figure out the doubles
 duplicate_cities <- c("AmarilloTX", "AuroraIL", "ChesterPA", 
                       "ColumbiaSC", "ColumbusGA", "Corpus ChristiTX", 
                       "GalvestonTX", "GreensboroNC", "JacksonMS", "JolietIL",
-                      "LaredoTX", "LubbockTX", "MaconGA", "MadisonWI", "MonroeLA", "OrlandoFL",
+                      "LaredoTX", "LubbockTX", "MaconGA", "MadisonWI", 
+                      "MonroeLA", "OrlandoFL",
                       "PhoenixAZ",  "San JoseCA", "Sioux FallsSD",
                       "StocktonCA")
 
@@ -105,12 +138,19 @@ hp_mayors_duplicate_sub <- hp_mayors %>%
   select(city,stateab, year, source)
 
 
+hp_mayors_sub <- hp_mayors %>%
+  select(cityname = city, state = stateab, year)
+
+# %>% mutate(source = "hp")
+
 vogl_mayor_clean_sub <- vogl_mayor_clean %>%
-  select(cityname, state, year) %>%
-  mutate(good = "goood") %>%
-  unique()
+  select(cityname, state, year) %>% mutate(source = "vogl")
 
 city_state_matches <- left_join(hp_mayors_duplicate_sub, vogl_mayor_clean_sub, by = c("city" = "cityname", "stateab" = "state"))
+
+city_state_matches <- left_join(hp_mayors_sub, vogl_mayor_clean_sub)
+
+
 
 # for year duplicates, want to know if ones already in vogl also in new
 city_state_year_matches <- left_join(vogl_mayor_clean_sub, hp_mayors_duplicate_sub, by = c("cityname" = "city", "state" = "stateab", "year" = "year")) 
@@ -125,7 +165,19 @@ city_state_year_matches %>%
 
 hp_mayors_sub
 
+city_state_matches %>%
+  mutate(count = 1) %>%
+  filter(source == "vogl") %>%
+  group_by(cityname, state) %>%
+  summarise(tot_count = sum(count))
+
 ```
+
+
+```{r}
+
+```
+
 
 ```{r join both sources of mayor data, include = FALSE}
 # 14214 obs (11,224)
@@ -361,7 +413,13 @@ vogl_mayor_clean %>%
   mutate(count = 1) %>%
   group_by(cityname, state) %>%
   summarise(tot_count = sum(count)) %>%
-  filter(state == "WV")
+  filter(state == "AL")
+
+vogl_mayor %>%
+  mutate(count = 1) %>%
+  group_by(city, state) %>%
+  summarise(tot_count = sum(count)) %>%
+  filter(state == "AL")
 ```
 
 
@@ -374,10 +432,15 @@ write.csv(redlined_mayor, "redlined_mayor.csv")
 
 redlined_mayor_cities <- redlined_mayor %>%
   mutate(count = 1) %>%
+  filter(!(is.na(bmayor))) %>%
   group_by(cityname, state, surveyed) %>%
-  summarise(tot = sum(count)) %>%
-  select(cityname, state)
+  summarise(tot = sum(count))
+
+view(redlined_mayor_cities)
 
 unique(redlined_mayor$year)
+
+redlined_mayor %>%
+  filter(cityname == "Tuscaloosa")
 ```
 
