@@ -27,20 +27,6 @@ cities_1930_20_60 <- cities_1930 %>%
          citypop_total >= 20000) %>%
   mutate(surveyed = ifelse(citypop_total >= 40000, 1, 0)) 
 
-#view(cities_1930_20_60)
-cities_1930 %>%
-  filter(cityname == "Delray Beach")
-
-
-vogl_mayor %>%
-  mutate(tot = 1) %>%
-  group_by(city, name, state) %>%
-  summarize(tot = sum(tot))
-
-vogl_mayor %>%
-  filter(state == "AL") %>%
-  view()
-
 ```
 
 
@@ -50,16 +36,17 @@ vogl_mayor_clean <- vogl_mayor %>%
   rename(raw_city = city, raw_state = state) %>%
   separate(name, c("cityname", "state"),",") %>%
   separate(state, c("space", "state"), " ") %>%
-  select(-space, -raw_city, -raw_state) %>%
+  #select(-space, -raw_city, -raw_state) %>%
   mutate(cityname = as.character(str_to_title(cityname)), vogl = 1) %>%
   select(cityname, state, year, bmayor, vogl)
 
-cities_1930_20_60_checked <- cities_1930_20_60[!(cities_1930_20_60$cityname == "Salem" & cities_1930_20_60$state == "MA"),]
-
-vogl_mayor_clean$cityname[vogl_mayor_clean$cityname[vogl_mayor_clean$state == "KY"] == "Lexington-Fayette"] <- "Lexington"
+vogl_mayor_clean$cityname[vogl_mayor_clean$cityname == "Lexington-Fayette" & vogl_mayor_clean$state == "KY"] <- "Lexington"
 
 vogl_mayor_clean %>%
-  filter(state == "CO")
+  filter(is.na(bmayor))
+
+vogl_mayor_clean %>%
+  filter(cityname == "Lexington")
 ```
 
 
@@ -99,24 +86,127 @@ hp_mayors_clean <- hp_mayors %>%
   group_by(cityst) %>%
   mutate(tot_bmayor = sum(bmayor_to_sum, na.rm = T)) %>%
   ungroup() %>%
-  mutate(bever = ifelse(tot_bmayor > 0, 1, 0), status = "match", hp = 1) %>%
-  select(city, stateab, year, bmayor, status, hp)
+  mutate(bever = ifelse(tot_bmayor > 0, 1, 0), hp = 1) %>%
+  select(city, stateab, year, bmayor,  hp, winnername) %>%
+  filter(!(is.na(bmayor)))
+
+hp_mayors_clean %>%
+  filter(city == "Albany", stateab == "GA")
+
+vogl_mayor %>%
+  filter(name == "ALBANY, GA")
 
 ```
 
 
-```{r}
+```{r initial join and dealing with year, state, city, race mismatches}
 
 # join -> deal with the matches -> don't want any matches!! other than that should be good :)
-full_join(vogl_mayor_clean, hp_mayors_clean, by = c("cityname" = "city", "state" = "stateab", "year" = "year", "bmayor" = "bmayor"))
+full_unfiltered <- full_join(vogl_mayor_clean, hp_mayors_clean, by = c("cityname" = "city", "state" = "stateab", "year" = "year", "bmayor" = "bmayor")) %>%
+  mutate(match = ifelse(vogl == 1 & hp == 1, 1, 0))
 
-# previous stats:
-# vogl clean 14214
-# hp clean 1088
-# total: 15302
-# original join has 14707
+# are there any observations where the mayor status does not match?
 
+full_unfiltered %>%
+  mutate(count = 1) %>%
+  group_by(cityname, state, year) %>%
+  summarise(tot_count = sum(count)) %>%
+  filter(tot_count != 1)
+
+
+# there are cases where the data conflicts on race of mayor... checking and fixing
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Albany" & vogl_mayor_clean$state == "GA" & vogl_mayor_clean$year == 2004)] <- 1
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Alexandria" & vogl_mayor_clean$state == "VA" & vogl_mayor_clean$year == 2003)] <- 1
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Alexandria" & vogl_mayor_clean$state == "VA" & vogl_mayor_clean$year == 2006)] <- 1
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Alexandria" & vogl_mayor_clean$state == "VA" & vogl_mayor_clean$year == 2009)] <- 1
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Atlantic City" & vogl_mayor_clean$state == "NJ" & vogl_mayor_clean$year == 1990)] <- 0
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Beaumont" & vogl_mayor_clean$state == "TX" & vogl_mayor_clean$year == 2002)] <- 0
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Camden" & vogl_mayor_clean$state == "NJ" & vogl_mayor_clean$year == 1997)] <- 0
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Chesapeake" & vogl_mayor_clean$state == "VA" & vogl_mayor_clean$year == 1992)] <- 1
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Chesapeake" & vogl_mayor_clean$state == "VA" & vogl_mayor_clean$year == 1996)] <- 1
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Chesapeake" & vogl_mayor_clean$state == "VA" & vogl_mayor_clean$year == 2000)] <- 1
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Chester" & vogl_mayor_clean$state == "PA" & vogl_mayor_clean$year == 2003)] <- 1
+
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Cincinnati" & vogl_mayor_clean$state == "OH" & vogl_mayor_clean$year == 1991)] <- 1
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Cincinnati" & vogl_mayor_clean$state == "OH" & vogl_mayor_clean$year == 1993)] <- 0
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Cincinnati" & vogl_mayor_clean$state == "OH" & vogl_mayor_clean$year == 2005)] <- 1
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Cleveland" & vogl_mayor_clean$state == "OH" & vogl_mayor_clean$year == 1989)] <- 1
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Cleveland" & vogl_mayor_clean$state == "OH" & vogl_mayor_clean$year == 2001)] <- 0
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Columbus" & vogl_mayor_clean$state == "OH" & vogl_mayor_clean$year == 1999)] <- 1
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Dallas" & vogl_mayor_clean$state == "TX" & vogl_mayor_clean$year == 2002)] <- 0
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Dayton" & vogl_mayor_clean$state == "OH" & vogl_mayor_clean$year == 1993)] <- 0
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Dayton" & vogl_mayor_clean$state == "OH" & vogl_mayor_clean$year == 2001)] <- 1
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Denver" & vogl_mayor_clean$state == "CO" & vogl_mayor_clean$year == 2003)] <- 0
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Des Moines" & vogl_mayor_clean$state == "IA" & vogl_mayor_clean$year == 1997)] <- 1
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Des Moines" & vogl_mayor_clean$state == "IA" & vogl_mayor_clean$year == 1999)] <- 1
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Durham" & vogl_mayor_clean$state == "NC" & vogl_mayor_clean$year == 1991)] <- 0
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Gary" & vogl_mayor_clean$state == "IN" & vogl_mayor_clean$year == 1995)] <- 0
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Greensboro" & vogl_mayor_clean$state == "NC" & vogl_mayor_clean$year == 2007)] <- 1
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Hampton" & vogl_mayor_clean$state == "VA" & vogl_mayor_clean$year == 2004)] <- 0
+
+vogl_mayor_clean$bmayor[(vogl_mayor_clean$cityname == "Hartford" & vogl_mayor_clean$state == "CT" & vogl_mayor_clean$year == 1993)] <- 0
+
+
+# there are 595 full matches -> get rid of these in hp data
+to_remove_from_hp <- full_unfiltered %>%
+  filter(match == 1) %>%
+  select(city =, stateab =, year =)
+
+
+full_unfiltered %>%
+  filter(cityname == "Lexington", state == "CA", year == "1965")
+
+vogl_mayor_clean %>%
+  filter(cityname == "Lexington", state == "CA", year == "1965")
+
+vogl_mayor %>%
+  filter(name == "CINCINNATI, OH", year == 1993)
+
+hp_mayors %>%
+  filter(city == "Cincinnati", stateab == "OH", year == 1993)
+
+
+# join -> deal with the matches -> don't want any matches!! other than that should be good :)
+full_unfiltered <- full_join(vogl_mayor_clean, hp_mayors_clean, by = c("cityname" = "city", "state" = "stateab", "year" = "year", "bmayor" = "bmayor")) %>%
+  mutate(match = ifelse(vogl == 1 & hp == 1, 1, 0))
+
+# are there any observations where the mayor status does not match?
+
+full_unfiltered %>%
+  mutate(count = 1) %>%
+  group_by(cityname, state, year) %>%
+  summarise(tot_count = sum(count)) %>%
+  filter(tot_count != 1)
+
+full_unfiltered %>%
+  filter(cityname == "Hartford", state == "CT", year == 1993)
 ```
+
+
+
+
+
+
+
+
+
 
 
 ```{r examining duplicates -> NONE SHOULD BE ADDED, include = FALSE}

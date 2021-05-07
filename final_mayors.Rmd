@@ -1,0 +1,81 @@
+---
+title: "final_mayors"
+author: "Maria Burzillo"
+date: "5/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r import data, include = FALSE}
+hp_mayors <- read.csv("Hopkins_Pettingill_mayors.csv")
+vogl_full <- read.csv("mayor_data_share_vogl.csv")
+
+# get cities within 10k range
+cities_1930 <- read.csv("ipums_1930_cities_by_pop_full_sample.csv") %>%
+  select(city_code = city, cityname, state, citypop_total)
+
+# cities within 20-60 range
+cities_1930_20_60 <- cities_1930 %>%
+  filter(citypop_total <= 60000,
+         citypop_total >= 20000) %>%
+  mutate(surveyed = ifelse(citypop_total >= 40000, 1, 0)) 
+
+```
+
+```{r}
+
+vogl_clean <- vogl_full %>%
+  mutate(vogl = 1)
+
+# DV is mayor_black integer and also runnerup_black
+vogl_full %>%
+  filter(state == "KY", is.na(state)) 
+```
+
+```{r clean hp_mayors, include = FALSE}
+
+other_race = c("asian", "hispanic", "white")
+
+hp_mayors_clean <- hp_mayors %>%
+  select(-X) %>%
+  mutate(mayor_black = ifelse(winnerrace == "black", 1, 
+                         ifelse(winnerrace %in% other_race, 0, NA)),
+         hp = 1)
+
+```
+
+```{r join sources of mayoral data, include = FALSE}
+
+vogl_clean_sub <- vogl_clean %>%
+  select(city, year, state, mayor_black, vogl)
+
+hp_clean_sub <- hp_mayors_clean %>%
+  select(city, year, stateab, mayor_black, hp)
+
+full_join(vogl_clean_sub, hp_clean_sub, by = c("city" = "city" , "year" = "year", "state" = "stateab", "mayor_black"))
+
+initial_join <- full_join(vogl_clean_sub, hp_clean_sub, by = c("city" = "city" , "year" = "year", "state" = "stateab"))
+
+initial_cities <- initial_join %>%
+  mutate(count = 1) %>%
+  group_by(city, state) %>%
+  summarise(n = sum(count)) %>%
+  view()
+
+```
+
+```{r}
+
+city_size <- left_join(initial_cities, cities_1930_20_60_checked, by = c("city" = "cityname", "state" = "state"))
+
+city_size %>%
+  filter(!(is.na(surveyed))) %>%
+  ungroup() %>%
+  summarise(tot_obs = sum(n))
+
+```
+
