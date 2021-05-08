@@ -450,11 +450,13 @@ cities_1930_20_60_checked <- cities_1930_20_60_checked %>%
          state = as.character(state))
 
   
-# view(cities_1930_20_60_checked)
+#view(cities_1930_20_60_checked)
 
-cities_1930_20_60_checked %>%
-  filter(citypop_total > 30000, citypop_total < 50000, surveyed == 0) %>%
-  view()
+#cities_1930_20_60_checked %>%
+#  filter(citypop_total > 30000, citypop_total < 50000, surveyed == 0) %>%
+#  view()
+
+write.csv(cities_1930_20_60_checked, "cities_1930_20_60_checked.csv")
 
 ```
 

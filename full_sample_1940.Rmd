@@ -28,10 +28,6 @@ second <- read.csv("usa_00030.csv")
 #fourth <- read.csv("usa_00032.csv")
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
 ```{r clean raw codebook, echo=FALSE}
 
 codebook_city_1940 <- raw_codebook %>%
@@ -93,3 +89,49 @@ write.csv(second_join, "second_join.csv")
 nrow(second_join)
 ```
 
+
+
+
+
+
+NEW CLEANING - Add ons
+
+```{r}
+cities_1930_20_60_checked <- read.csv("cities_1930_20_60_checked.csv")
+
+cities_1930_20_60_checked_unite <- cities_1930_20_60_checked %>%
+  unite("cityst", cityname, state, sep = ", ")
+
+# second <- read.csv("usa_00042.csv") 
+#first <- read.csv("usa_00041.csv") 
+#third <- read.csv("usa_00043.csv") 
+# fourth <- read.csv("usa_00044.csv") 
+# fifth <- read.csv("usa_00045.csv") 
+# sixth <- read.csv("usa_00046.csv") 
+seventh <- read.csv("usa_00047.csv") 
+
+
+# first_join <- left_join(first, cities_1930_20_60_checked_unite, by = c("CITY" = "city_code")) %>% filter(!(is.na(cityst)))
+
+#second_join <- left_join(second, cities_1930_20_60_checked_unite, by = c("CITY" = "city_code")) %>% filter(!(is.na(cityst)))
+
+seventh_join <- left_join(seventh, cities_1930_20_60_checked_unite, by = c("CITY" = "city_code")) %>%
+  filter(!(is.na(cityst)))
+
+```
+
+
+```{r}
+
+# checked and first join has all cities needed GOOD!!!s
+seventh_join %>%
+  select(cityst) %>%
+  unique() %>%
+  view()
+
+cities_1930_20_60_checked_unite
+
+# write.csv(first_join, "first_join.csv")
+# write.csv(second_join, "second_join.csv")
+write.csv(seventh_join, "seventh_join.csv")
+```

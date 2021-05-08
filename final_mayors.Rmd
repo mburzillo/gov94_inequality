@@ -26,56 +26,155 @@ cities_1930_20_60 <- cities_1930 %>%
 
 ```
 
-```{r}
+```{r clean vogl, include = FALSE}
 
 vogl_clean <- vogl_full %>%
-  mutate(vogl = 1)
+  mutate(vogl = 1) %>%
+  # remove non-potential dvs from dataset 
+  select(-pop, -vpop, -dempres_1960, -pop_2000, -pop_1990, -pop_1980,
+         -pop_1970, -pop_1960, -pop_2010, -age18_1960, -age18_1970,
+         -age18_1980, -age18_1990, -age18_2000, -age18_2010, -age65_1960, -age65_1970,
+         -age65_1980, -age65_1990, -age65_2000) %>%
+  mutate(runnerup_black = ifelse(runnerup_black == 9, NA, runnerup_black))
 
 # DV is mayor_black integer and also runnerup_black
-vogl_full %>%
-  filter(state == "KY", is.na(state)) 
+vogl_clean %>%
+  filter(runnerup_black > 1)  
+
 ```
 
 ```{r clean hp_mayors, include = FALSE}
-
 other_race = c("asian", "hispanic", "white")
 
 hp_mayors_clean <- hp_mayors %>%
-  select(-X) %>%
+  select(-X, -source, - cityst) %>%
   mutate(mayor_black = ifelse(winnerrace == "black", 1, 
                          ifelse(winnerrace %in% other_race, 0, NA)),
+         loser_black = ifelse(loserrace == "black", 1, ifelse(loserrace %in% other_race, 0, NA)),
          hp = 1)
+  
 
 ```
 
 ```{r join sources of mayoral data, include = FALSE}
 
 vogl_clean_sub <- vogl_clean %>%
-  select(city, year, state, mayor_black, vogl)
+  select(city, year, state, mayor_black, vogl, runnerup_black, margin, inc_1959,
+         inc_1969, inc_1979, inc_1989, inc_1999, riot_index) %>%
+  mutate(log_inc_1959 = log(inc_1959), log_inc_1969 = log(inc_1969),
+         log_inc_1979 = log(inc_1979), log_inc_1989 = log(inc_1989),
+         log_inc_1999 = log(inc_1999))
 
 hp_clean_sub <- hp_mayors_clean %>%
-  select(city, year, stateab, mayor_black, hp)
+  select(city, year, stateab, mayor_black, hp, margin = diffwinnerandloser, loser_black) %>%
+  mutate(margin = margin/100)
 
-full_join(vogl_clean_sub, hp_clean_sub, by = c("city" = "city" , "year" = "year", "state" = "stateab", "mayor_black"))
 
-initial_join <- full_join(vogl_clean_sub, hp_clean_sub, by = c("city" = "city" , "year" = "year", "state" = "stateab"))
+# this is all the city, year, state combos with black mayor data, but instances in which non-matching data from both datasets (e.g. different recording of mayors race not controlled for)
+initial_join <- full_join(vogl_clean_sub, hp_clean_sub, by = c("city" = "city" , "year" = "year", "state" = "stateab", "mayor_black"))
+
+
+# initial_join <- full_join(vogl_clean_sub, hp_clean_sub, by = c("city" = "city" , "year" = "year", "state" = "stateab"))
 
 initial_cities <- initial_join %>%
   mutate(count = 1) %>%
   group_by(city, state) %>%
-  summarise(n = sum(count)) %>%
-  view()
+  summarise(n = sum(count)) 
+
+hp_mayors_clean %>%
+  select(winnerpercent, loserpercent, diffwinnerandloser) %>%
+  mutate(new = winnerpercent - loserpercent)
+
+```
+
+```{r join city and mayor data, include = FALSE}
+
+initial_join_city_size <- left_join(cities_1930_20_60_checked, initial_join, by = c("cityname" = "city", "state" = "state")) %>%
+  rename(citypop_1930 = citypop_total,
+         city = cityname)
+
+# checking to see how many cities present
+initial_join_city_size %>%
+  mutate(n = 1) %>%
+  filter(!(is.na(surveyed))) %>%
+  ungroup() %>%
+  summarise(tot_obs = sum(n))
+
+# check for duplicate observations for city, state, year combos
+# Jackson, MS not an error - both observations from Vogl and one is from an interim mayor who was not technically elected
+# same issue with Orlando
+# same issue with San Angelo - no issues, no changes being made
+initial_join_city_size %>%
+  filter(!(is.na(mayor_black))) %>%
+  mutate(count = 1) %>%
+  group_by(city, state, year) %>%
+  summarise(obs = sum(count)) %>%
+  filter(obs != 1)
+
+initial_join_city_size %>%
+  filter(city == "San Angelo", state == "TX", year == 2009)
+
+full_mayor_data <- initial_join_city_size
+
+write.csv(full_mayor_data, "full_mayor_data.csv")
 
 ```
 
 ```{r}
+vogl_clean %>%
+  filter(city == "San Angelo", state == "TX", year == 2009)
 
-city_size <- left_join(initial_cities, cities_1930_20_60_checked, by = c("city" = "cityname", "state" = "state"))
+full_mayor_data
+```
 
-city_size %>%
-  filter(!(is.na(surveyed))) %>%
+
+```{r joining mayoral and city data}
+
+#full_city_data_1940
+
+mayor_city_stats_data <- full_join(full_city_data_1940, full_mayor_data, by = c("CITY" = "city_code", "surveyed", "citypop_1930")) %>%
+  select(-X.x, -X.y) %>%
+  rename(elec_year = year, city_code = CITY,
+         region = REGION, stateicp = STATEICP, statefip = STATEFIP, 
+         n_hhs_40 = n_hhs, p_renter_40 = p_renter, avg_rent_40 = avg_rent,
+         avg_hh_val_40 = avg_hh_val, p_black_40 = p_black, p_non_white_40 = p_non_white,
+         p_foreign_born_40 = p_foreign_born, n_school_people_40 = n_school_people,
+         avg_years_school_40 = avg_years_school, male_emp_rate_40 = male_employment_rate,
+         male_pop_40 = male_pop, p_male_emp_40 = p_employed) %>%
+  #mutate(mayor_black_to_sum = ifelse(is.na(mayor_black), 0, 1) %>%
+  group_by(city_code) %>%
+  mutate(tot_black_mayors = sum(mayor_black, na.rm = T),
+         ever_black = ifelse(tot_black_mayors != 0, tot_black_mayors/tot_black_mayors, 0)) %>%
   ungroup() %>%
-  summarise(tot_obs = sum(n))
+  # vogl margins used as default, but hp used if exists and no vogl exists
+  mutate(margin = ifelse(is.na(margin.x), ifelse(is.na(margin.y), NA, margin.y), margin.x)) %>%
+  select(-margin.x, -margin.y) %>%
+  mutate(runnerup_black_2 = ifelse(is.na(runnerup_black), 
+                                 ifelse(is.na(loser_black), NA, loser_black), runnerup_black)) %>%
+  select(-runnerup_black, - loser_black) %>%
+  rename(runnerup_black = runnerup_black_2)
+
+
+
+mayor_city_stats_data %>%
+  select(runnerup_black, loser_black, runnerup_black_2) 
+
+
+write.csv(mayor_city_stats_data, "mayor_city_stats_data.csv")
+
+```
+
+
+```{r initial plots}
+mayor_city_stats_data %>%
+  ggplot(aes(x = elec_year, y = mayor_black)) +
+  geom_point(alpha = .5) +
+  geom_smooth(se = FALSE) +
+  facet_wrap(~surveyed)
+
+mayor_city_stats_data %>%
+  ggplot(aes(x = elec_year, y = mayor_black)) +
+  geom_smooth(aes(colour = as.factor(surveyed)), se = FALSE)
 
 ```
 

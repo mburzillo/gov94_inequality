@@ -1,0 +1,8 @@
+*Files*
+
+**Full Sample 1940:** new stuff at the bottom - takes in the census data and joins with potential cities in the correct 1930 population range (20-60k), then drops any non-matches. 
+**Full Sample 1940 Cleaning:** Takes the individual datafiles from the various cities, combines them, and generates summary statistics at the city level for person and HH characteristics.
+
+**Final Mayors:** Most up-to-date RMD with work to join the two sources of mayor data. 
+
+**cities_1930_20_60_checked.csv:** data file containing city info including survey status for all U.S. cities with 1930 populations between 20-60k

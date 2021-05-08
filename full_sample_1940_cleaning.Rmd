@@ -14,7 +14,11 @@ library(tidyverse)
 # first <- read.csv("first_join.csv")
 # second <- read.csv("second_join.csv")
 # third <- read.csv("third_join.csv")
-# fourth <- read.csv("fourth_join.csv")
+# fifth <- read.csv("fifth_join.csv")
+# sixth <- read.csv("sixth_join.csv")
+seventh <- read.csv("seventh_join.csv")
+
+cities_1930_20_60_checked <- read.csv("cities_1930_20_60_checked.csv")
 ```
 
 
@@ -22,73 +26,195 @@ library(tidyverse)
 #full_1940_sample_redlined_mayors <- rbind(first, second)
 #full_1940_sample_redlined_mayors <- rbind(full_1940_sample_redlined_mayors,third)
 #full_1940_sample_redlined_mayors <- rbind(full_1940_sample_redlined_mayors,fourth)
+
+full_1940 <- seventh
 ```
-
-
-```{r write data, include = FALSE}
-#write.csv(full_1940_sample_redlined_mayors, "full_1940_sample_redlined_mayors.csv")
-```
-
 
 ```{r check for data issues}
 
-full_1940_sample_redlined_mayors <- read.csv("full_1940_sample_redlined_mayors.csv") 
-
 # Remove an accidental duplicate and delete unnecessary columns
-full_1940_sample_redlined_mayors <- full_1940_sample_redlined_mayors[!(full_1940_sample_redlined_mayors$CITY == 3392 & full_1940_sample_redlined_mayors$STATEFIP == 12),] %>%
-  select(-RACED, -HIGHGRADED, EDUCD)
-
-#full_1940_sample_redlined_mayors %>% filter(CITY == 3392, STATEFIP == 12)
-
-```
-
-```{r preview}
-head(full_1940_sample_redlined_mayors)
+full_1940 <- full_1940 %>%
+  select(-RACED, -EDUCD, -HISTID, -OWNERSHPD, -EMPSTATD) %>%
+  rename(citypop_1930 = citypop_total)
 
 ```
 
 ```{r generate person-level summary statistics by city}
-full_1940_sample_redlined_mayors %>%
-  mutate(n_black_perwt = ifelse(RACE == 2, 1 * PERWT, 0),
+######## person-level variables
+
+# sex: universe is all persons
+# age: universe is all persons
+# race: all persons
+# nativity: universe is sample-line persons
+# educ: all persons
+# empstat: all persons 14+
+# labforce: all persons 14+
+# incwage: Persons age 14+, not institutional inmates.
+
+
+## NOTE: PERWT is always 1!
+
+# PERWT is fine but need to check on universe
+full_1940_edit <- full_1940 %>%
+  mutate(male = ifelse(SEX == 1, 1, 0),
+         n_14_plus = ifelse(AGE >= 14, 1, 0), 
+         n_black_perwt = ifelse(RACE == 2, 1 * PERWT, 0),
          n_non_white_perwt = ifelse(RACE != 1, 1 * PERWT, 0),
-         n_foreign_born = ifelse(NATIVITY == 5, 1 * PERWT, 0),
+         n_foreign_born = ifelse(NATIVITY == 5, 1 * SLWT, 0),
          avg_years_school = NA,
-         n_employed = ifelse(EMPSTAT)
-         
+         n_in_lf = ifelse(EMPSTAT == 1 | EMPSTAT == 2, 1, 0),
+         n_in_lf_and_14p = n_in_lf * n_14_plus,
+         n_male_in_lf_and_14p = n_in_lf * n_14_plus * male,
+         n_employed = ifelse(EMPSTAT == 1, 1, 0),
+         inc_wage = ifelse(INCWAGE == 999999, NA, ifelse(INCWAGE == 999998, NA, INCWAGE))
          )
 
+
 # Coding Edu data
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$EDUC == 0, 0, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 0, 0, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 1, (1 + 2 + 3 +4)/4, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 1, (1 + 2 + 3 +4)/4, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 2, (5 + 6 + 7 + 8)/4, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 2, (5 + 6 + 7 + 8)/4, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 3, 9, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 3, 9, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 4, 10, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 4, 10, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 5, 11, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 5, 11, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 6, 12, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 6, 12, full_1940_edit$avg_years_school)
 
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 7, 13, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 7, 13, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 8, 14, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 8, 14, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 9, 15, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 9, 15, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 10, 16, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 10, 16, full_1940_edit$avg_years_school)
 
-full_1940_sample_redlined_mayors$avg_years_school = ifelse(full_1940_sample_redlined_mayors$avg_years_school == 11, 17, full_1940_sample_redlined_mayors$avg_years_school)
+full_1940_edit$avg_years_school = ifelse(full_1940_edit$EDUC == 11, 17, full_1940_edit$avg_years_school)
+
+full_1940_edit$n_school_people = ifelse(is.na(full_1940_edit$avg_years_school), 0, 1)
+
+unique(full_1940_edit$EMPSTAT)
 
 ```
 
 ```{r collapse by city}
-full_1940_sample_redlined_mayors %>%
-  group_by(CITY, cityst, REGION, STATEICP, STATEFIP) %>%
-  summarise(tot_pop = sum(PERWT), citypop_gen = mean(CITYPOP))
+city_collapse_person_level <- full_1940_edit %>%
+  group_by(CITY, cityst, REGION, STATEICP, STATEFIP, surveyed, citypop_1930) %>%
+  summarise(tot_pop = sum(PERWT), 
+            citypop_gen = mean(CITYPOP),
+            p_black = 100* sum(n_black_perwt)/tot_pop,
+            p_non_white = 100 * sum(n_non_white_perwt)/tot_pop,
+            p_foreign_born = 100 * sum(n_foreign_born)/tot_pop,
+            n_school_people = sum(n_school_people),
+            avg_years_school = sum(avg_years_school, na.rm = T)/sum(n_school_people),
+            male_employment_rate = 100 * sum(n_employed * male)/sum(n_male_in_lf_and_14p),
+            male_pop = sum(PERWT * male),
+            p_employed = 100 * sum(n_employed * male)/male_pop
+            ) %>%
+  rename(citypop_1940 = tot_pop)
+
+```
+
+
+```{r generate HH-level summary statistics by city}
+######## HH-level variables
+# ownership: universe is not group quarters
+# rent: universe is renter occupied units
+# valueh: value of a house for all owner-occupied units
+
+# want to group by serial and sample -> a unique number for each hh
+
+#view(full_1940_edit)
+
+full_1940_edit_hh <- full_1940_edit %>%
+  select(YEAR, SAMPLE, SERIAL, HHWT, REGION, STATEICP, STATEFIP,
+         CITY, CITYPOP, GQ, OWNERSHP, RENT, VALUEH, cityst, citypop_1930, surveyed) %>%
+  unique() %>%
+  mutate(# own/rent-related vars
+         not_gq = ifelse(GQ != 3, ifelse(GQ != 4, 1, 0), 0),
+         n_rented = ifelse(OWNERSHP == 2, 1 * not_gq * HHWT, 0),
+         n_rented_denom = ifelse(OWNERSHP != 0, 1 * not_gq * HHWT, 0),
+         # rental value-related vars
+         not_na_rent = ifelse(RENT == 0000, 0, 1),
+         not_no_rent = ifelse(RENT == 0001, 0, 1),
+         not_missing_rent = ifelse(RENT == 9998, 0, 1),
+         not_no_rent_2 = ifelse(RENT == 9999, 0, 1),
+         rent = n_rented * RENT * not_na_rent * not_no_rent * 
+                         not_missing_rent * not_no_rent_2,
+         rent_denom = n_rented * not_na_rent * not_no_rent * 
+                         not_missing_rent * not_no_rent_2,
+         # housing value-related vars
+         not_na_hval = ifelse(VALUEH == 0000000, 0, 1),
+         not_miss_hval = ifelse(VALUEH == 9999998, 0, 1),
+         not_na_hval = ifelse(VALUEH == 9999999, 0, 1),
+         n_owned = ifelse(OWNERSHP == 1, 1 * not_gq * HHWT, 0),
+         n_owned_denom = ifelse(OWNERSHP != 0, 1 * not_gq * HHWT, 0),
+         valueh = VALUEH * not_na_hval * not_miss_hval * not_na_hval * n_owned,
+         hval_denom = not_na_hval * not_miss_hval * not_na_hval * n_owned)
+
+
+# seems to have appropriately eliminated duplicates! now do hh stats
+full_1940_edit_hh %>%
+  mutate(count = 1) %>%
+  group_by(SAMPLE, SERIAL) %>%
+  summarise(tot_count = sum(count)) %>%
+  filter(tot_count != 1)
+
+# nique(full_1940_edit_hh$GQ)
+
+colnames(city_collapse_person_level)
+
+```
+
+```{r collapse by city for hh variables}
+
+city_collapse_hh_level <- full_1940_edit_hh %>%
+  group_by(CITY, cityst, REGION, STATEICP, STATEFIP, surveyed, citypop_1930) %>%
+  summarise(n_hhs = sum(HHWT),
+            p_renter = 100 * sum(n_rented)/sum(n_rented_denom),
+            avg_rent = sum(rent)/sum(rent_denom),
+            avg_hh_val = sum(valueh)/sum(hval_denom)
+            )
+
+colnames(city_collapse_hh_level)
+
+```
+
+```{r join person and hh by city, include = FALSE}
+
+final_city_1940 <- full_join(city_collapse_hh_level, city_collapse_person_level, by = c("CITY", "cityst", "REGION", "STATEICP", "STATEFIP", "surveyed", "citypop_1930"))
+
+# REPLACE NAME HERE
+write.csv(final_city_1940, "final_city_1940_seventh.csv")
+
+```
+
+
+```{r join all of the subsets together into one, include = FALSE}
+first <- read.csv("final_city_1940_first.csv")
+second <- read.csv("final_city_1940_second.csv")
+third <- read.csv("final_city_1940_third.csv")
+fourth <- read.csv("final_city_1940_fourth.csv")
+fifth <- read.csv("final_city_1940_fifth.csv")
+sixth <- read.csv("final_city_1940_sixth.csv")
+seventh <- read.csv("final_city_1940_seventh.csv")
+
+full_city_data_1940 <- rbind(first, second)
+full_city_data_1940 <- rbind(full_city_data_1940, third)
+full_city_data_1940 <- rbind(full_city_data_1940, fourth)
+full_city_data_1940 <- rbind(full_city_data_1940, fifth)
+full_city_data_1940 <- rbind(full_city_data_1940, sixth)
+full_city_data_1940 <- rbind(full_city_data_1940, seventh)
+
+# Remove an accidental duplicate
+full_city_data_1940 <- full_city_data_1940[!(full_city_data_1940$STATEFIP == 12 & full_city_data_1940$cityst == "La Grange, GA"),]
+
+write.csv(full_city_data_1940, "full_city_data_1940.csv")
 
 ```
 
