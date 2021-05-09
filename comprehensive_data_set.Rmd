@@ -1,0 +1,221 @@
+---
+title: "comprehensive"
+author: "Maria Burzillo"
+date: "5/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r import data, include = FALSE}
+hp_mayors <- read.csv("Hopkins_Pettingill_mayors.csv")
+vogl_full <- read.csv("mayor_data_share_vogl.csv")
+
+# get cities within 10k range
+cities_1930 <- read.csv("ipums_1930_cities_by_pop_full_sample.csv") %>%
+  select(city_code = city, cityname, state, citypop_total)
+
+# cities within 20-60 range
+cities_1930_20_60 <- cities_1930 %>%
+  filter(citypop_total <= 60000,
+         citypop_total >= 20000) %>%
+  mutate(surveyed = ifelse(citypop_total >= 40000, 1, 0)) 
+
+fin_seg <- read.csv("fin_seg.csv")
+
+cities_1930_20_60_checked <- read.csv("cities_1930_20_60_checked.csv")
+
+full_city_data_1940 <- read.csv("full_city_data_1940.csv")
+
+```
+
+```{r clean vogl, include = FALSE}
+
+vogl_clean <- vogl_full %>%
+  mutate(vogl = 1) %>%
+  # remove non-potential dvs from dataset 
+  select(-pop, -vpop, -dempres_1960, -pop_2000, -pop_1990, -pop_1980,
+         -pop_1970, -pop_1960, -pop_2010, -age18_1960, -age18_1970,
+         -age18_1980, -age18_1990, -age18_2000, -age18_2010, -age65_1960, -age65_1970,
+         -age65_1980, -age65_1990, -age65_2000) %>%
+  mutate(runnerup_black = ifelse(runnerup_black == 9, NA, runnerup_black))
+
+# DV is mayor_black integer and also runnerup_black
+vogl_clean %>%
+  filter(runnerup_black > 1)  
+
+```
+
+```{r clean hp_mayors, include = FALSE}
+other_race = c("asian", "hispanic", "white")
+
+hp_mayors_clean <- hp_mayors %>%
+  select(-X, -source, -cityst) %>%
+  mutate(mayor_black = ifelse(winnerrace == "black", 1, 
+                         ifelse(winnerrace %in% other_race, 0, NA)),
+         loser_black = ifelse(loserrace == "black", 1, ifelse(loserrace %in% other_race, 0, NA)),
+         hp = 1)
+
+hp_mayors_clean %>%
+  filter(city == "Monroe")
+```
+
+```{r join sources of mayoral data, include = FALSE}
+
+vogl_clean_sub <- vogl_clean %>%
+  select(city, year, state, mayor_black, vogl, runnerup_black, margin, inc_1959,
+         inc_1969, inc_1979, inc_1989, inc_1999, riot_index) %>%
+  mutate(log_inc_1959 = log(inc_1959), log_inc_1969 = log(inc_1969),
+         log_inc_1979 = log(inc_1979), log_inc_1989 = log(inc_1989),
+         log_inc_1999 = log(inc_1999))
+
+hp_clean_sub <- hp_mayors_clean %>%
+  select(city, year, stateab, mayor_black, hp, margin = diffwinnerandloser, loser_black) %>%
+  mutate(margin = margin/100)
+
+
+# this is all the city, year, state combos with black mayor data for ALL cities -> haven't subset the ones in the 20-60 range yet
+initial_join <- full_join(vogl_clean_sub, hp_clean_sub, by = c("city" = "city" , "year" = "year", "state" = "stateab", "mayor_black"))  %>%
+  # vogl margins used as default, but hp used if exists and no vogl exists
+  mutate(margin = ifelse(is.na(margin.x), ifelse(is.na(margin.y), NA, margin.y), margin.x)) %>%
+  select(-margin.x, -margin.y)
+
+
+# initial_join <- full_join(vogl_clean_sub, hp_clean_sub, by = c("city" = "city" , "year" = "year", "state" = "stateab"))
+
+initial_cities <- initial_join %>%
+  mutate(count = 1) %>%
+  group_by(city, state) %>%
+  summarise(n = sum(count)) 
+
+vogl_clean_sub %>%
+  filter(city == "San Angelo", state == "TX")
+
+
+```
+
+```{r make income its own column, include = FALSE}
+income_data <- initial_join %>%
+  select(city, state,log_inc_1959, log_inc_1969, log_inc_1979, 
+                 log_inc_1989, log_inc_1999) %>%
+  filter(!(is.na(log_inc_1959)), !(is.na(log_inc_1969)), !(is.na(log_inc_1979)), 
+                 !(is.na(log_inc_1989)), !(is.na(log_inc_1999))) %>%
+  pivot_longer(c(log_inc_1959, log_inc_1969, log_inc_1979, 
+                 log_inc_1989, log_inc_1999), names_to = "year2", values_to = "log_inc") %>%
+  separate(year2, c("drop", "year"), sep = -4) %>%
+  select(-drop) %>%
+  mutate(year = as.numeric(year)) %>%
+  unique()
+
+join_2 <- full_join(initial_join, income_data) %>%
+  select(-log_inc_1959, -log_inc_1969, -log_inc_1979, 
+                 -log_inc_1989, -log_inc_1999, 
+         -inc_1959, -inc_1969, -inc_1979, 
+                 -inc_1989, -inc_1999)
+
+income_data %>%
+  filter(city == "Jackson", year == 2009)
+
+initial_join %>%
+    filter(city == "Jackson", year == 2009)
+
+join_2 %>%
+  filter(is.na(fips_st))
+```
+
+```{r add in fin seg data, include = FALSE}
+# take a subset with relevant variables from the fin_seg_dataset
+fin_seg_sub <- fin_seg %>%
+  select(year, fips_st, name00, dgepercap_cpi, parkspercap_cpi,policepercap_cpi, pubwelfpercap_cpi,
+         welfhoushealth_cpi, H_citytract_multi_i, H_citytract_NHW_i, pctlocalgovworker_100,
+         ideology_fill)
+
+state_fips <-read.csv("state_fips.csv")
+
+fin_seg_sub_fips <- left_join(fin_seg_sub, state_fips, by = c("fips_st" = "state_fips"))
+
+join_3 <- full_join(join_2, fin_seg_sub_fips, by = c("year", "city" = "name00", "state" = "state_ab"))
+
+
+```
+
+```{r join in }
+
+join_3 %>%
+  filter(is.na(city))
+
+cities_1930_20_60_checked_edit <- cities_1930_20_60_checked %>%
+  rename(citypop_1930 = citypop_total)
+
+join_4 <- left_join(cities_1930_20_60_checked_edit, join_3, by = c("cityname" = "city", "state"))
+
+join_4 %>%
+  filter(!(is.na(mayor_black)))
+
+# for some reason, some duplicate entries by state, cityname, year...WHY? -> seems to be from special elections -> no cause for concern!!
+# Monrow is for a runoff, Jackson for interim
+# Orlando was an interim and similar thing in TX
+join_4 %>%
+  mutate(count = 1) %>%
+  group_by(cityname, state, year) %>%
+  summarise(tot_count = sum(count)) %>%
+  filter(tot_count != 1)
+
+join_4 %>%
+  mutate(count = 1) %>%
+  group_by(cityname, state, year) %>%
+  summarise(tot_count = sum(count)) %>%
+  filter(tot_count != 1)
+
+  
+```
+
+```{r join in census data}
+
+join_4_edit <- join_4 %>%
+  select(-fips_st)
+
+join_a <- left_join(join_4_edit, state_fips, by = c("state" = "state_ab"))
+
+
+full_city_data_1940_edit <- full_city_data_1940 %>%
+  select(-X.1, -X, -citypop_1930) %>%
+  rename(city_code = CITY,
+         region = REGION, stateicp = STATEICP, statefip = STATEFIP, 
+         n_hhs_40 = n_hhs, p_renter_40 = p_renter, avg_rent_40 = avg_rent,
+         avg_hh_val_40 = avg_hh_val, p_black_40 = p_black, p_non_white_40 = p_non_white,
+         p_foreign_born_40 = p_foreign_born, n_school_people_40 = n_school_people,
+         avg_years_school_40 = avg_years_school, male_emp_rate_40 = male_employment_rate,
+         male_pop_40 = male_pop, p_male_emp_40 = p_employed, inc_wage_1940 = inc_wage)
+
+
+join_5 <- left_join(join_a, full_city_data_1940_edit, by = c("city_code", "state_fips" = "statefip", "surveyed")) %>%
+  select(-X)
+
+
+write.csv(join_5, "new_final_comprehensive.csv")
+
+join_5 %>%
+  filter(is.na(surveyed))
+
+join_5 %>%
+  filter(is.na(city_code))
+
+join_5 %>%
+  filter(is.na(state))
+
+join_5 %>%
+  filter(is.na(state_fips))
+
+
+join_5 %>%
+  filter(is.na(p_black_40))
+
+```
+
+```{r}
+state_fips
+```
+

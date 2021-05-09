@@ -246,8 +246,6 @@ city_state_matches <- left_join(hp_mayors_sub, vogl_mayor_clean_sub)
 city_state_year_matches <- left_join(vogl_mayor_clean_sub, hp_mayors_duplicate_sub, by = c("cityname" = "city", "state" = "stateab", "year" = "year")) 
 
 # not matched from vogl -> These don't appear to be in Vogl at all... why marked in originally?
-city_state_matches %>%
-  filter(is.na(good))
 
 # match with hp by year, city, state -> need to remove from that before joining to avoid duplicates -> all potential duplicates are matched -> need to remove all
 city_state_year_matches %>%

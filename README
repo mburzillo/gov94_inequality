@@ -6,3 +6,5 @@
 **Final Mayors:** Most up-to-date RMD with work to join the two sources of mayor data. 
 
 **cities_1930_20_60_checked.csv:** data file containing city info including survey status for all U.S. cities with 1930 populations between 20-60k
+
+**comprehensive_data_set.RMD** creates the final dataset, new_final_comprehensive.csv, fixing previous issues.

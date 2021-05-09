@@ -14,11 +14,12 @@ library(tidyverse)
 # first <- read.csv("first_join.csv")
 # second <- read.csv("second_join.csv")
 # third <- read.csv("third_join.csv")
+# fourth <- read.csv("fourth_join.csv")
 # fifth <- read.csv("fifth_join.csv")
 # sixth <- read.csv("sixth_join.csv")
 seventh <- read.csv("seventh_join.csv")
 
-cities_1930_20_60_checked <- read.csv("cities_1930_20_60_checked.csv")
+# cities_1930_20_60_checked <- read.csv("cities_1930_20_60_checked.csv")
 ```
 
 
@@ -66,7 +67,10 @@ full_1940_edit <- full_1940 %>%
          n_in_lf_and_14p = n_in_lf * n_14_plus,
          n_male_in_lf_and_14p = n_in_lf * n_14_plus * male,
          n_employed = ifelse(EMPSTAT == 1, 1, 0),
-         inc_wage = ifelse(INCWAGE == 999999, NA, ifelse(INCWAGE == 999998, NA, INCWAGE))
+         inc_wage = ifelse(INCWAGE == 999999, NA, ifelse(INCWAGE == 999998, NA, INCWAGE)),
+         inc_wage_not_missing_1 = ifelse(INCWAGE == 999999, 0, 1),
+         inc_wage_not_missing_2 = ifelse(INCWAGE == 999998, 0, 1),
+         inc_wage_denom = inc_wage_not_missing_1 * inc_wage_not_missing_2
          )
 
 
@@ -114,7 +118,8 @@ city_collapse_person_level <- full_1940_edit %>%
             avg_years_school = sum(avg_years_school, na.rm = T)/sum(n_school_people),
             male_employment_rate = 100 * sum(n_employed * male)/sum(n_male_in_lf_and_14p),
             male_pop = sum(PERWT * male),
-            p_employed = 100 * sum(n_employed * male)/male_pop
+            p_employed = 100 * sum(n_employed * male)/male_pop,
+            inc_wage = sum(inc_wage)/sum(inc_wage_denom)
             ) %>%
   rename(citypop_1940 = tot_pop)
 

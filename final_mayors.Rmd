@@ -24,6 +24,8 @@ cities_1930_20_60 <- cities_1930 %>%
          citypop_total >= 20000) %>%
   mutate(surveyed = ifelse(citypop_total >= 40000, 1, 0)) 
 
+fin_seg <- read.csv("fin_seg.csv")
+
 ```
 
 ```{r clean vogl, include = FALSE}
@@ -52,8 +54,6 @@ hp_mayors_clean <- hp_mayors %>%
                          ifelse(winnerrace %in% other_race, 0, NA)),
          loser_black = ifelse(loserrace == "black", 1, ifelse(loserrace %in% other_race, 0, NA)),
          hp = 1)
-  
-
 ```
 
 ```{r join sources of mayoral data, include = FALSE}
@@ -120,14 +120,6 @@ write.csv(full_mayor_data, "full_mayor_data.csv")
 
 ```
 
-```{r}
-vogl_clean %>%
-  filter(city == "San Angelo", state == "TX", year == 2009)
-
-full_mayor_data
-```
-
-
 ```{r joining mayoral and city data}
 
 #full_city_data_1940
@@ -155,11 +147,6 @@ mayor_city_stats_data <- full_join(full_city_data_1940, full_mayor_data, by = c(
   rename(runnerup_black = runnerup_black_2)
 
 
-
-mayor_city_stats_data %>%
-  select(runnerup_black, loser_black, runnerup_black_2) 
-
-
 write.csv(mayor_city_stats_data, "mayor_city_stats_data.csv")
 
 ```
@@ -176,5 +163,164 @@ mayor_city_stats_data %>%
   ggplot(aes(x = elec_year, y = mayor_black)) +
   geom_smooth(aes(colour = as.factor(surveyed)), se = FALSE)
 
+full_city_data_1940
+
+```
+
+```{r}
+
+income_data <- mayor_city_stats_data %>%
+ mutate(log_inc_1940 = log(inc_wage)) %>%
+# select(-runnerup_black, -margin, - ever_black, -tot_black_mayors, -hp, -riot_index, -vogl, - mayor_black, -elec_year) %>%
+  pivot_longer(c(log_inc_1940, log_inc_1959, log_inc_1969, log_inc_1979, log_inc_1989, log_inc_1999), names_to = "year", values_to = "log_inc") %>%
+  separate(year, c("drop", "year"), sep = -4) %>%
+  select(-drop) %>%
+  mutate(year = as.numeric(year))
+
+```
+
+```{r}
+
+income_data %>%
+  ggplot(aes(x = as.numeric(year), y = log_inc)) +
+  geom_point(alpha = .5) +
+  stat_summary(fun=mean, geom="line", color = "red") +
+  facet_wrap(~surveyed)
+
+```
+
+```{r introduce fin_seg data, include = FALSE}
+
+# take a subset with relevant variables from the fin_seg_dataset
+fin_seg_sub <- fin_seg %>%
+  select(year, fips_st, name00,dgepercap_cpi, parkspercap_cpi,policepercap_cpi, pubwelfpercap_cpi,
+         welfhoushealth_cpi, H_citytract_multi_i, H_citytract_NHW_i, pctlocalgovworker_100,
+         ideology_fill)
+
+# goal is to join this by year, state, city
+
+# take only the cities that are within the desired range
+state_fips <-read.csv("state_fips.csv")
+
+cities_1930_20_60_checked_fips <- left_join(cities_1930_20_60_checked, state_fips, by = c("state"  = "state_ab"))
+
+fin_seg_cities_20_60 <- left_join(cities_1930_20_60_checked_fips, fin_seg_sub, 
+                                  by = c("cityname" = "name00", "state_fips" = "fips_st"))
+
+fin_seg_cities_20_60_all_40_info <- full_join(full_city_data_1940, fin_seg_cities_20_60, 
+                                              by = c("STATEFIP" = "state_fips", "surveyed",
+                                                     "citypop_1930" = "citypop_total", 
+                                                     "CITY" = "city_code" ))
+
+# has correct number of cities
+fin_seg_cities_20_60_all_40_info %>%
+  mutate(count = 1) %>%
+  group_by(cityname, state) %>%
+  summarize(tot_count = sum(count))
+
+```
+
+```{r}
+colnames(income_data)
+```
+
+
+```{r join with comprehensive data, include = FALSE}
+
+# drop things from income data we want from fin seg
+income_data_2 <- income_data %>%
+  select(-region, -avg_rent_40, - avg_hh_val_40, - p_black_40,
+         -p_non_white_40, -p_foreign_born_40, -n_school_people_40, -avg_years_school_40,
+         -male_emp_rate_40, - male_pop_40, -p_male_emp_40, -p_renter_40)
+
+            
+# BELIEVE THIS SHOULD BE GOOD TO GO BUT NEED TO CHECK!!!
+city_trounstine_mayor_income <- full_join(income_data_2, fin_seg_cities_20_60_all_40_info, 
+                                          by = c("city" = "cityname", "statefip" = "STATEFIP", "year",
+                                                 "state", "surveyed", "citypop_1930", "citypop_gen",
+                                                 "citypop_1940", "city_code" = "CITY", "cityst", "inc_wage")) %>%
+    select(-X.x, -X.y) %>%
+    rename(
+         region = REGION,
+         avg_rent_40 = avg_rent, p_renter_40 = p_renter,
+         avg_hh_val_40 = avg_hh_val, p_black_40 = p_black, p_non_white_40 = p_non_white,
+         p_foreign_born_40 = p_foreign_born, n_school_people_40 = n_school_people,
+         avg_years_school_40 = avg_years_school, male_emp_rate_40 = male_employment_rate,
+         male_pop_40 = male_pop, p_male_emp_40 = p_employed)
+
+# number of cities is correct
+city_trounstine_mayor_income %>%
+  mutate(count = 1) %>%
+  group_by(city, state) %>%
+  summarise(tot_count = sum(count))
+
+city_trounstine_mayor_income %>%
+  filter(!(is.na(mayor_black))) %>%
+  mutate(count = 1) %>%
+  group_by(city, state, elec_year) %>%
+  summarise(tot_count = sum(count))
+
+write.csv(city_trounstine_mayor_income, "city_trounstine_mayor_income.csv")
+
+colnames(fin_seg_cities_20_60_all_40_info)
+
+fin_seg_cities_20_60_all_40_info %>%
+  filter(is.na(cityname))
+
+```
+
+
+```{r}
+colnames(full_city_data_1940)
+```
+
+```{r}
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = H_citytract_multi_i)) +
+  geom_point() +
+  stat_summary(fun=mean, geom="line", color = "red") +
+  facet_grid(~surveyed)
+
+```
+
+```{r}
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = dgepercap_cpi)) +
+  geom_point() +
+  stat_summary(fun=mean, geom="line", color = "red") +
+  facet_grid(~surveyed)
+
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = dgepercap_cpi, color = as.factor(surveyed))) +
+  stat_summary(fun=mean, geom ="line") 
+
+# higher score means more conservative...interesting!!
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = ideology_fill, color = as.factor(surveyed))) +
+  stat_summary(fun=mean, geom="line") 
+
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = parkspercap_cpi, color = as.factor(surveyed))) +
+  stat_summary(fun=mean, geom="line") 
+
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = policepercap_cpi, color = as.factor(surveyed))) +
+  stat_summary(fun=mean, geom="line") 
+
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = pubwelfpercap_cpi, color = as.factor(surveyed))) +
+  stat_summary(fun=mean, geom="line") 
+
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = welfhoushealth_cpi, color = as.factor(surveyed))) +
+  stat_summary(fun=mean, geom="line") 
+
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = H_citytract_multi_i, color = as.factor(surveyed))) +
+  stat_summary(fun=mean, geom="line") 
+
+city_trounstine_mayor_income %>%
+  ggplot(aes(x = year, y = H_citytract_NHW_i, color = as.factor(surveyed))) +
+  stat_summary(fun=mean, geom="line") 
 ```
 
