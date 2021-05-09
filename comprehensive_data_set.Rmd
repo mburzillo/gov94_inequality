@@ -29,6 +29,12 @@ cities_1930_20_60_checked <- read.csv("cities_1930_20_60_checked.csv")
 
 full_city_data_1940 <- read.csv("full_city_data_1940.csv")
 
+vogl_full %>%
+  mutate(count = 1) %>%
+  group_by(city, state) %>%
+  summarise(tot_count = sum(count))
+
+range(vogl_full$year)
 ```
 
 ```{r clean vogl, include = FALSE}
@@ -60,6 +66,14 @@ hp_mayors_clean <- hp_mayors %>%
 
 hp_mayors_clean %>%
   filter(city == "Monroe")
+
+range(hp_mayors$year)
+
+hp_mayors %>%
+  mutate(count = 1) %>%
+  group_by(cityst) %>%
+  summarise(tcount = sum(count))
+
 ```
 
 ```{r join sources of mayoral data, include = FALSE}
@@ -192,30 +206,84 @@ full_city_data_1940_edit <- full_city_data_1940 %>%
 
 
 join_5 <- left_join(join_a, full_city_data_1940_edit, by = c("city_code", "state_fips" = "statefip", "surveyed")) %>%
-  select(-X)
+  select(-X, -state_name.x) %>%
+  rename(state_name = state_name.y)
+
+join_5_edit <- join_5 %>% 
+  mutate(inc_wage_1940_2 = inc_wage_1940) %>%
+  pivot_longer(inc_wage_1940, names_to = "year3", values_to = "log_inc2") %>%
+  select(-log_inc, - year, -mayor_black, -vogl, - runnerup_black, -riot_index, -hp, -loser_black,
+         -margin, -dgepercap_cpi, -parkspercap_cpi, - policepercap_cpi, - pubwelfpercap_cpi, 
+         -welfhoushealth_cpi, - H_citytract_multi_i, -H_citytract_NHW_i, -pctlocalgovworker_100, 
+         -ideology_fill) %>%
+  separate(year3, c("drop", "year"), sep = -4) %>%
+  select(-drop) %>%
+  mutate(year = as.numeric(year), log_inc = log(log_inc2)) %>%
+  select(-log_inc2) %>%
+  rename(inc_wage_1940 = inc_wage_1940_2) %>%
+  unique()
+
+join_6 <- full_join(join_5, join_5_edit) %>%
+  mutate(mayor_black_to_sum = ifelse(is.na(mayor_black), 0, mayor_black),
+         runner_black_to_sum = ifelse(is.na(loser_black), 0, loser_black),
+         tot_mayor_and_runner_black_temp = ifelse(is.na(mayor_black), 0, mayor_black) + 
+           ifelse(is.na(loser_black), 0, loser_black),
+         replace_with_NA = ifelse(is.na(mayor_black) & is.na(loser_black), NA, 1),
+         tot_mayor_and_runner_black = tot_mayor_and_runner_black_temp * replace_with_NA,
+         tot_elections = replace_with_NA *ifelse(!(is.na(mayor_black)), 1, 0),
+         tot_candidates = replace_with_NA * (ifelse(!(is.na(mayor_black)), 1, 0) + 
+                                               ifelse(!(is.na(loser_black)), 1, 0)))
+#  select(-mayor_black_to_sum, -runner_black_to_sum, -tot_mayor_and_runner_black_temp)
 
 
-write.csv(join_5, "new_final_comprehensive.csv")
+write.csv(join_6, "new_final_comprehensive.csv")
 
-join_5 %>%
+join_6 %>%
   filter(is.na(surveyed))
-
-join_5 %>%
+join_6 %>%
   filter(is.na(city_code))
-
-join_5 %>%
+join_6 %>%
   filter(is.na(state))
-
-join_5 %>%
+join_6 %>%
   filter(is.na(state_fips))
-
-
-join_5 %>%
+join_6 %>%
   filter(is.na(p_black_40))
 
 ```
 
 ```{r}
-state_fips
+join_6 %>%
+  mutate(count = 1) %>%
+  group_by(cityname, state) %>%
+  summarise(tot_mayor_black = sum(mayor_black, na.rm = T), tot_obs = sum(count))
+
+join_6 %>%
+  select(mayor_black, loser_black, tot_mayor_and_runner_black_temp, replace_with_NA, tot_mayor_and_runner_black, tot_elections, tot_candidates)
+```
+
+```{r}
+join_6 %>%
+  mutate(count = 1) %>%
+  filter(!(is.na(mayor_black))) %>%
+  group_by(cityname, state) %>%
+  summarise(surveyed = mean(surveyed), tot_count = sum(count), citypop_1930 = mean(citypop_1930), 
+            citypop_1940 = mean(citypop_1940), p_black_40 = mean(p_black_40), p_foreign_born_40 = mean(p_foreign_born_40),
+            avg_years_school_40 = mean(avg_years_school_40), male_emp_rate_40 = mean(male_emp_rate_40), inc_wage_1940 = mean(inc_wage_1940)) %>%
+  view()
+```
+
+```{r}
+join_6 %>%
+  mutate(count = 1) %>%
+  filter(!(is.na(dgepercap_cpi))) %>%
+  group_by(cityname, state) %>%
+  summarise(tot_count = sum(count))
+```
+
+```{r}
+join_6 %>%
+  select(cityname, state, surveyed) %>%
+  unique() %>%
+  view()
 ```
 

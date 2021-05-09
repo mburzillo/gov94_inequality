@@ -223,3 +223,7 @@ write.csv(full_city_data_1940, "full_city_data_1940.csv")
 
 ```
 
+```{r}
+full_city_data_1940
+```
+
