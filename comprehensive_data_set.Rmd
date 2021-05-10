@@ -287,3 +287,25 @@ join_6 %>%
   view()
 ```
 
+```{r}
+join_6 %>%
+  filter(!(is.na(ideology_fill))) %>%
+  ggplot(aes(x = year, y = ideology_fill, color = as.factor(surveyed))) +
+  geom_point()+
+  geom_smooth(se = FALSE) +
+  facet_grid(~as.factor(surveyed)) +
+  ggtitle("White Ideology Score by HOLC-Surveyed and Non-Surveyed Cities") +
+  labs(color = "City Surveyed?")
+```
+
+```{r}
+join_6 %>%
+  filter(!(is.na(mayor_black))) %>%
+  ggplot(aes(x = year, y = mayor_black, color = as.factor(surveyed))) +
+  geom_point()+
+  geom_smooth(se = FALSE) +
+  facet_grid(~as.factor(surveyed)) +
+  ggtitle("White Ideology Score by HOLC-Surveyed and Non-Surveyed Cities") +
+  labs(color = "City Surveyed?")
+```
+
